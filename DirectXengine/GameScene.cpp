@@ -1,6 +1,7 @@
 #include "GameScene.h"
 #include "Model.h"
 #include "Collision.h"
+#include "FbxLoader.h"
 
 #include <cassert>
 #include <sstream>
@@ -80,13 +81,16 @@ void GameScene::Initialize(DxInit* dxInit, Input* input, Sound* sound)
 	Obj2->SetScale({ 2, 2, 2 });
 
 	//BGM.SE読み込み
-	soundData1 = sound->SoundLoadWave("Resources/sound/BGM.wav");
-	se0 = sound->SoundLoadWave("Resources/sound/SE0.wav");
-	se1 = sound->SoundLoadWave("Resources/sound/SE1.wav");
-	se2 = sound->SoundLoadWave("Resources/sound/SE2.wav");
-	se3 = sound->SoundLoadWave("Resources/sound/SE3.wav");
-	se4 = sound->SoundLoadWave("Resources/sound/SE4.wav");
-	sound->SoundPlayWave(soundData1);//サウンド再生
+	//soundData1 = sound->SoundLoadWave("Resources/sound/BGM.wav");
+	//se0 = sound->SoundLoadWave("Resources/sound/SE0.wav");
+	//se1 = sound->SoundLoadWave("Resources/sound/SE1.wav");
+	//se2 = sound->SoundLoadWave("Resources/sound/SE2.wav");
+	//se3 = sound->SoundLoadWave("Resources/sound/SE3.wav");
+	//se4 = sound->SoundLoadWave("Resources/sound/SE4.wav");
+	//sound->SoundPlayWave(soundData1);//サウンド再生
+
+	//モデルを指定してファイル読み込み
+	FbxLoader::GetInstance()->LoadModelFromFile("cube");
 
 	camera->Update();//カメラ更新処理
 }
@@ -134,6 +138,7 @@ void GameScene::Update()
 		eye.x++;
 	}
 
+	/*
 	//SPACEキーで効果音
 	if (input->IsKeyTrigger(DIK_SPACE))
 	{
@@ -160,6 +165,7 @@ void GameScene::Update()
 			sound->SoundPlayWave(se4);//サウンド再生
 		}
 	}
+	*/
 
 	camera->SetEye(eye);//カメラ座標更新
 

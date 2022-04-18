@@ -2,9 +2,13 @@
 #include "DxInit.h"
 #include "Sound.h"
 #include "GameScene.h"
+//#include "fbxsdk.h"
+#include "FbxLoader.h"
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
+	//FbxManager* fbxManager = FbxManager::Create();
+
 	//WinInit
 	WinInit* win = nullptr;
 	win = new WinInit();
@@ -32,6 +36,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	//3Dオブジェクト
 	Object3d::StaticInitialize(dxInit->GetDev(), WinInit::WIN_WIDTH, WinInit::WIN_HEIGHT);
+
+	//FBX
+	FbxLoader::GetInstance()->Initialize(dxInit->GetDev());
 
 	//GameScene
 	gameScene = new GameScene();
@@ -69,6 +76,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	delete(sound);
 	delete(input);
 	delete(dxInit);
+	FbxLoader::GetInstance()->Finalize();
 
 	//ウィンドウの破棄
 	win->DeleteWIN();

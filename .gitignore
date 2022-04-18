@@ -440,3 +440,4 @@ $RECYCLE.BIN/
 !.vscode/extensions.json
 *.rej
 DirectXengine/Resources/sound/
+DirectXengine/lib/fbx_sdk/lib/
