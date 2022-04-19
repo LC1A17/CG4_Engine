@@ -71,4 +71,16 @@ private://メンバ変数
 
 	XMFLOAT3 eye = { 0, 10, -50 };//カメラ座標
 	XMFLOAT3 pPos = { 0, 0, 0 };//プレイヤー座標
+
+	float gravity = 9.8f;//重力加速度
+	float t = 0.0f;//時間(ペンギン)
+	float t2 = 0.0f;//時間(シロクマ)
+	float posY = 20.0f;//ペンギンのY座標
+	float posX2 = -20.0f;//シロクマのY座標
+	float posY2 = -20.0f;//シロクマのY座標
+	float fallY = 0.0f;//ペンギンの移動量(Y)
+	float fallX2 = 0.0f;//シロクマの移動量(X)
+	float fallY2 = 0.0f;//シロクマの移動量(Y)
+	bool isFall = false;//落ちるフラグ(自由落下)
+	bool isFall2 = false;//落ちるフラグ(斜方投射)
 };

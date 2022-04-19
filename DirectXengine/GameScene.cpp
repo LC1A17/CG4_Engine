@@ -70,14 +70,14 @@ void GameScene::Initialize(DxInit* dxInit, Input* input, Sound* sound)
 	model = model->CreateFromOBJ("player");
 	Obj = Object3d::Create();
 	Obj->SetModel(model);
-	Obj->SetPosition({ 0, 0, 0 });
+	Obj->SetPosition({ 20, posY, 0 });
 	Obj->SetScale({ 2, 2, 2 });
 
 	//モデル2
 	model = model->CreateFromOBJ("enemy");
 	Obj2 = Object3d::Create();
 	Obj2->SetModel(model);
-	Obj2->SetPosition({ -20, 0, 40 });
+	Obj2->SetPosition({ posX2, posY2, 0 });
 	Obj2->SetScale({ 2, 2, 2 });
 
 	//BGM.SE読み込み
@@ -100,6 +100,61 @@ void GameScene::Update()
 {
 	//ここに追加
 
+	//1で自由落下
+	if (input->IsKeyTrigger(DIK_1))
+	{
+		isFall = true;
+	}
+
+	//2で斜方投射
+	if (input->IsKeyTrigger(DIK_2))
+	{
+		isFall2 = true;
+	}
+
+	//Rでリセット
+	if (input->IsKeyTrigger(DIK_R))
+	{
+		t = 0.0f;
+		t2 = 0.0f;
+		isFall = false;
+		isFall2 = false;
+		Obj->SetPosition({ 20, posY, 0 });
+		Obj2->SetPosition({ posX2, posY2, 0 });
+	}
+
+	//自由落下移動処理
+	if (isFall)
+	{
+		t += 0.1f;
+		fallY = -(4 * t + 0.5 * 9.8 * t * t);
+		Obj->SetPosition({ 20, posY + fallY, 0 });
+
+		if (t >= 20.0f)
+		{
+			t = 0;
+			isFall = false;
+			Obj->SetPosition({ 20, posY, 0 });
+		}
+	}
+
+	//斜方投射移動処理
+	if (isFall2)
+	{
+		t2 += 0.1f;
+		fallX2 = 10 * t2;
+		fallY2 = 20 * t2 + 0.5 * -9.8 * t2 * t2;
+		Obj2->SetPosition({ posX2 + fallX2, posY2 + fallY2, 0 });
+
+		if (t2 >= 20.0f)
+		{
+			t2 = 0;
+			isFall2 = false;
+			Obj2->SetPosition({ posX2, posY2, 0 });
+		}
+	}
+
+	/*
 	//WASDでプレイヤー移動
 	if (input->IsKey(DIK_W))
 	{
@@ -138,7 +193,6 @@ void GameScene::Update()
 		eye.x++;
 	}
 
-	/*
 	//SPACEキーで効果音
 	if (input->IsKeyTrigger(DIK_SPACE))
 	{
