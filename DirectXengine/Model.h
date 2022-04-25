@@ -78,6 +78,12 @@ public://メンバ関数
 	void Initialize(const std::string& modelname);//初期化処理
 	void Draw(ID3D12GraphicsCommandList* cmdList);//描画処理
 
+	//バッファ生成
+	void CreateBuffers(ID3D12Device* dev);
+
+	//モデルの変形行列取得
+	const XMMATRIX& GetModelTransform() { return meshNode->globalTransform; }
+
 private://メンバ変数
 	std::string name;//名前
 	std::vector<Node> nodes;//ノード配列
@@ -93,6 +99,19 @@ private://メンバ変数
 	std::unordered_map<std::string, Material*> materials;//マテリアルコンテナ
 	Material* defaultMaterial = nullptr;//デフォルトマテリアル
 	ComPtr<ID3D12DescriptorHeap> descHeap;//デスクリプタヒープ
+
+	//頂点バッファ
+	ComPtr<ID3D12Resource> vertBuff;
+	//インデックスバッファ
+	ComPtr<ID3D12Resource> indexBuff;
+	//テクスチャバッファ
+	ComPtr<ID3D12Resource> texBuff;
+	//頂点バッファビュー
+	D3D12_VERTEX_BUFFER_VIEW vbView = {};
+	//インデックスバッファビュー
+	D3D12_INDEX_BUFFER_VIEW ibView = {};
+	//SRV用デスクリプタヒープ
+	ComPtr<ID3D12DescriptorHeap> descHeapSRV;
 
 private://メンバ関数
 	void LoadMaterial(const std::string& directoryPath, const std::string& filename);//マテリアル読み込み

@@ -70,6 +70,9 @@ void FbxLoader::LoadModelFromFile(const string& modelName)
 
     //FBXシーン解放
     fbxScene->Destroy();
+
+    //バッファ生成
+    model->CreateBuffers(dev);
 }
 
 //再帰的にノード構成を解析
