@@ -4,12 +4,14 @@
 #include <xaudio2.h>
 #include <wrl.h>
 
-using namespace Microsoft::WRL;
-
 //サウンド
 class Sound
 {
-public://構造体
+private://エイリアス
+	//Microsoft::WRL::を省略
+	template <class T> using ComPtr = Microsoft::WRL::ComPtr<T>;
+
+public://サブクラス
 	//チャンクヘッダ
 	struct ChunkHeader
 	{

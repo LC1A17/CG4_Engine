@@ -25,24 +25,21 @@ Sound::SoundData Sound::SoundLoadWave(const char* filename)
 
 	//ファイル入力ストリームのインスタンス
 	ifstream file;
-
 	//.wavファイルをバイナリモードで開く
 	file.open(filename, ios_base::binary);
-	
 	//ファイルオープン失敗を検出する
 	assert(file.is_open());
 
 	//RIFFヘッダーの読み込み
 	RiffHeader riff;
 	file.read((char*)&riff, sizeof(riff));
-
 	//ファイルがRIFFかチェック
 	if (strncmp(riff.chunk.id, "RIFF", 4) != 0)
 	{
 		assert(0);
 	}
 
-	//タイプがRIFFかチェック
+	//タイプがWAVEかチェック
 	if (strncmp(riff.type, "WAVE", 4) != 0)
 	{
 		assert(0);
@@ -50,7 +47,6 @@ Sound::SoundData Sound::SoundLoadWave(const char* filename)
 
 	//Formatチャンクの読み込み
 	FormatChunk format = {};
-
 	//チャンクヘッダーの確認
 	file.read((char*)&format, sizeof(ChunkHeader));
 

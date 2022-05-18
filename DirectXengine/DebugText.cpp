@@ -15,6 +15,12 @@ DebugText::~DebugText()
 	}
 }
 
+DebugText* DebugText::GetInstance()
+{
+	static DebugText instance;
+	return &instance;
+}
+
 //‰Šú‰»ˆ—
 void DebugText::Initialize(UINT texnumber)
 {
@@ -29,8 +35,16 @@ void DebugText::Initialize(UINT texnumber)
 //1•¶š—ñ’Ç‰Á
 void DebugText::Print(const std::string& text, float x, float y, float scale = 1.0f)
 {
+	SetPos(x, y);
+	SetSize(scale);
+
+	NPrint((int)text.size(), text.c_str());
+}
+
+void DebugText::NPrint(int len, const char* text)
+{
 	//‘S‚Ä‚Ì•¶š‚É‚Â‚¢‚Ä
-	for (int i = 0; i < text.size(); i++)
+	for (int i = 0; i < len; i++)
 	{
 		//Å‘å•¶š”’´‰ß
 		if (spriteIndex >= maxCharCount)
@@ -42,7 +56,6 @@ void DebugText::Print(const std::string& text, float x, float y, float scale = 1
 		const unsigned char& character = text[i];
 
 		int fontIndex = character - 32;
-		
 		if (character >= 0x7f)
 		{
 			fontIndex = 0;
@@ -52,13 +65,22 @@ void DebugText::Print(const std::string& text, float x, float y, float scale = 1
 		int fontIndexX = fontIndex % fontLineCount;
 
 		//À•WŒvZ
-		spriteDatas[spriteIndex]->SetPosition({ x + fontWidth * scale * i, y });
+		spriteDatas[spriteIndex]->SetPosition({ this->posX + fontWidth * this->size * i, this->posY });
 		spriteDatas[spriteIndex]->SetTextureRect({ (float)fontIndexX * fontWidth, (float)fontIndexY * fontHeight }, { (float)fontWidth, (float)fontHeight });
-		spriteDatas[spriteIndex]->SetSize({ fontWidth * scale, fontHeight * scale });
+		spriteDatas[spriteIndex]->SetSize({ fontWidth * this->size, fontHeight * this->size });
 
 		//•¶š‚ğ‚P‚Âi‚ß‚é
 		spriteIndex++;
 	}
+}
+
+void DebugText::Printf(const char* fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int w = vsnprintf(buffer, bufferSize - 1, fmt, args);
+	NPrint(w, buffer);
+	va_end(args);
 }
 
 //‚Ü‚Æ‚ß‚Ä•`‰æ

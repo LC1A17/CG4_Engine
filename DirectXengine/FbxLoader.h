@@ -18,10 +18,7 @@ public://定数
 	static const string baseDirectory;
 
 public:
-	/// <summary>
-	/// シングルトンインスタンスの取得
-	/// </summary>
-	/// <returns>インスタンス</returns>
+	//シングルトンインスタンスの取得
 	static FbxLoader* GetInstance();
 
 	//初期化処理
@@ -31,7 +28,7 @@ public:
 	void Finalize();
 
 	//ファイルからFBXモデル読込
-	void LoadModelFromFile(const string& modelName);
+	Model* LoadModelFromFile(const string& modelName);
 
 	//再帰的にノード構成を解析
 	void ParseNodeRecursive(Model* model, FbxNode* fbxNode, Node* parent = nullptr);
@@ -48,6 +45,9 @@ public:
 	//マテリアル読み取り
 	void ParseMaterial(Model* model, FbxNode* fbxNode);
 
+	//スキニング情報の読み取り
+	void ParseSkin(Model* model, FbxMesh* fbxMesh);
+
 	//テクスチャ読み込み
 	void LoadTexture(Model* model, const std::string& fullpath);
 
@@ -63,6 +63,8 @@ private:
 	FbxLoader(const FbxLoader& obj) = delete;
 	// コピー代入演算子を禁止（シングルトンパターン）
 	void operator=(const FbxLoader& obj) = delete;
+	//FBXの行列をXMMatrixに変換
+	static void ConvertMatrixFromFbx(DirectX::XMMATRIX* dst, const FbxAMatrix& src);
 
 	//D3D12デバイス
 	ID3D12Device* dev = nullptr;

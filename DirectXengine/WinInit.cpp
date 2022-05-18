@@ -1,20 +1,8 @@
 #include "WinInit.h"
 
-const wchar_t WinInit::TitleName[] = L"LE2B_23_ニシハタ_コウキ";//ゲームタイトル
+const wchar_t WinInit::TitleName[] = L"LE3A_17_ニシハタ_コウキ";//ゲームタイトル
 const int WinInit::WIN_WIDTH = 1280;//ウィンドウの横幅
 const int WinInit::WIN_HEIGHT = 720;//ウィンドウの横幅
-
-//ウィンドウハンドルの取得
-HWND WinInit::GetHwnd()
-{
-	return hwnd;
-}
-
-//ウィンドウクラスの取得
-HINSTANCE WinInit::GetInstance()
-{
-	return win.hInstance;
-}
 
 //ウィンドウプロシージャ
 LRESULT WinInit::WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -64,7 +52,7 @@ void WinInit::CreateWIN()
 //メッセージループ
 bool WinInit::MessageLoop()
 {
-	MSG msg{};	// メッセージ
+	MSG msg{};//メッセージ
 
 	//メッセージがある？
 	if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))

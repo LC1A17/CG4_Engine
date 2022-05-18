@@ -1,29 +1,20 @@
 #include "DxInit.h"
 #include <vector>
 #include <cassert>
-//#include <string>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
 
+using namespace Microsoft::WRL;
 using namespace std;
-
-//デバイスの取得
-ID3D12Device* DxInit::GetDev()
-{
-	return dev.Get();
-}
-
-//コマンドリストの取得
-ID3D12GraphicsCommandList* DxInit::GetCmdList()
-{
-	return cmdList.Get();
-}
 
 //初期化
 void DxInit::Initialize(WinInit* WinIni)
 {
+	//nullptrチェック
+	//assert(winini);
+
 	this->winini = WinIni;//ウィンドウプロシージャ
 	InitializeAdapter();//アダプターの列挙
 	InitializeDevice();//デバイスの生成
@@ -34,26 +25,108 @@ void DxInit::Initialize(WinInit* WinIni)
 	CreateFence();//フェンス
 }
 
+//描画前処理
+void DxInit::BeforeDraw()
+{
+	//バックバッファの番号を取得（2つなので0番か1番）
+	UINT bbIndex = swapchain->GetCurrentBackBufferIndex();
+
+	//1:リソースバリアを書き込み可能に変更
+	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backBuffers[bbIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+	//2:描画先指定
+	//レンダーターゲットビュー用デスクリプタヒープのハンドルを取得
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvH = CD3DX12_CPU_DESCRIPTOR_HANDLE(rtvHeaps->GetCPUDescriptorHandleForHeapStart(), bbIndex, dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+	//深度ステンシルビュー用デスクリプタヒープのハンドルを取得
+	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvH = CD3DX12_CPU_DESCRIPTOR_HANDLE(dsvHeap->GetCPUDescriptorHandleForHeapStart());
+	//レンダーターゲットをセット
+	cmdList->OMSetRenderTargets(1, &rtvH, false, &dsvH);
+
+	//3:全画面クリア
+	ClearRenderTarget();
+	//深度バッファクリア
+	ClearDepthBuffer();
+
+	//ビューポート設定
+	cmdList->RSSetViewports(1, &CD3DX12_VIEWPORT(0.0f, 0.0f, WinInit::WIN_WIDTH, WinInit::WIN_HEIGHT));
+	//シザー矩形設定
+	cmdList->RSSetScissorRects(1, &CD3DX12_RECT(0, 0, WinInit::WIN_WIDTH, WinInit::WIN_HEIGHT));
+}
+
+//描画後処理
+void DxInit::AfterDraw()
+{
+	//リソースバリアを変更（描画対象→表示状態）
+	UINT bbIndex = swapchain->GetCurrentBackBufferIndex();
+	//5:リソースバリアを戻す
+	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backBuffers[bbIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+	//命令のクローズ
+	cmdList->Close();
+
+	//コマンドリストの実行
+	ID3D12CommandList* cmdLists[] = { cmdList.Get() };//コマンドリストの配列
+	cmdQueue->ExecuteCommandLists(1, cmdLists);
+
+	//コマンドリストの実行完了を待つ
+	cmdQueue->Signal(fence.Get(), ++fenceVal);
+
+	if (fence->GetCompletedValue() != fenceVal)
+	{
+		HANDLE event = CreateEvent(nullptr, false, false, nullptr);
+		fence->SetEventOnCompletion(fenceVal, event);
+		WaitForSingleObject(event, INFINITE);
+		CloseHandle(event);
+	}
+
+	cmdAllocator->Reset();//キューをクリア
+	cmdList->Reset(cmdAllocator.Get(), nullptr);//再びコマンドリストを貯める準備
+
+	//バッファをフリップ
+	swapchain->Present(1, 0);
+}
+
+//レンダーターゲットのクリア
+void DxInit::ClearRenderTarget()
+{
+	UINT bbIndex = swapchain->GetCurrentBackBufferIndex();
+
+	//レンダーターゲットビュー用ディスクリプタヒープのハンドルを取得
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvH = CD3DX12_CPU_DESCRIPTOR_HANDLE(rtvHeaps->GetCPUDescriptorHandleForHeapStart(), bbIndex, dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+
+	//全画面クリア
+	float clearColor[] = { 0.7f, 0.0f, 0.2f, 0.0f };
+	cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
+}
+
+//深度バッファのクリア
+void DxInit::ClearDepthBuffer()
+{
+	//深度ステンシルビュー用デスクリプタヒープのハンドルを取得
+	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvH = CD3DX12_CPU_DESCRIPTOR_HANDLE(dsvHeap->GetCPUDescriptorHandleForHeapStart());
+	//深度バッファのクリア
+	cmdList->ClearDepthStencilView(dsvH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+}
+
 //アダプターの列挙
 void DxInit::InitializeAdapter()
 {
 	HRESULT result = S_FALSE;
 
-	#ifdef _DEBUG
+#ifdef _DEBUG
 	ComPtr<ID3D12Debug> debugController;
-
 	//デバッグレイヤーをオンに	
 	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 	{
 		debugController->EnableDebugLayer();
 	}
-	#endif
+#endif
 
 	//DXGIファクトリーの生成
 	result = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
 
 	//アダプターの列挙用
-	vector<ComPtr<IDXGIAdapter1>> adapters;
+	std::vector<ComPtr<IDXGIAdapter1>> adapters;
 
 	for (int i = 0; dxgiFactory->EnumAdapters1(i, &tmpAdapter) != DXGI_ERROR_NOT_FOUND; i++)
 	{
@@ -71,10 +144,10 @@ void DxInit::InitializeAdapter()
 			continue;
 		}
 
-		wstring strDesc = adesc.Description;//アダプター名
+		std::wstring strDesc = adesc.Description;//アダプター名
 
 		//Intel UHD Graphics（オンボードグラフィック）を回避
-		if (strDesc.find(L"Intel") == wstring::npos)
+		if (strDesc.find(L"Intel") == std::wstring::npos)
 		{
 			tmpAdapter = adapters[i];//採用
 			break;
@@ -185,80 +258,6 @@ void DxInit::CreateRTV()
 	}
 }
 
-//フェンス
-void DxInit::CreateFence()
-{
-	HRESULT result = S_FALSE;
-
-	//フェンスの生成
-	result = dev->CreateFence(fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-}
-
-//描画前
-void DxInit::BeforeDraw()
-{
-	//バックバッファの番号を取得（2つなので0番か1番）
-	UINT bbIndex = swapchain->GetCurrentBackBufferIndex();
-
-	//1:リソースバリアを書き込み可能に変更
-	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backBuffers[bbIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-	//2:描画先指定
-	//レンダーターゲットビュー用デスクリプタヒープのハンドルを取得
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvH = CD3DX12_CPU_DESCRIPTOR_HANDLE(rtvHeaps->GetCPUDescriptorHandleForHeapStart(), bbIndex, dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-	
-	//深度ステンシルビュー用デスクリプタヒープのハンドルを取得
-	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvH = CD3DX12_CPU_DESCRIPTOR_HANDLE(dsvHeap->GetCPUDescriptorHandleForHeapStart());
-	
-	//レンダーターゲットをセット
-	cmdList->OMSetRenderTargets(1, &rtvH, false, &dsvH);
-
-	//3:画面クリア
-	float clearColor[] = { 0.7f, 0.0f, 0.2f, 0.0f };
-	cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
-	cmdList->ClearDepthStencilView(dsvH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-	//ビューポート設定
-	cmdList->RSSetViewports(1, &CD3DX12_VIEWPORT(0.0f, 0.0f, WinInit::WIN_WIDTH, WinInit::WIN_HEIGHT));
-	
-	//シザー矩形設定
-	cmdList->RSSetScissorRects(1, &CD3DX12_RECT(0, 0, WinInit::WIN_WIDTH, WinInit::WIN_HEIGHT));
-}
-
-//描画後
-void DxInit::AfterDraw()
-{
-	//バックバッファの番号を取得（2つなので0番か1番）
-	UINT bbIndex = swapchain->GetCurrentBackBufferIndex();
-
-	//5:リソースバリアを戻す
-	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backBuffers[bbIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-
-	//命令のクローズ
-	cmdList->Close();
-
-	//コマンドリストの実行
-	ID3D12CommandList* cmdLists[] = { cmdList.Get() };//コマンドリストの配列
-	cmdQueue->ExecuteCommandLists(1, cmdLists);
-
-	//コマンドリストの実行完了を待つ
-	cmdQueue->Signal(fence.Get(), ++fenceVal);
-	
-	if (fence->GetCompletedValue() != fenceVal)
-	{
-		HANDLE event = CreateEvent(nullptr, false, false, nullptr);
-		fence->SetEventOnCompletion(fenceVal, event);
-		WaitForSingleObject(event, INFINITE);
-		CloseHandle(event);
-	}
-
-	cmdAllocator->Reset();//キューをクリア
-	cmdList->Reset(cmdAllocator.Get(), nullptr);//再びコマンドリストを貯める準備
-
-	//バッファをフリップ
-	swapchain->Present(1, 0);
-}
-
 //深度バッファ生成
 void DxInit::CreateDepthBuffer()
 {
@@ -296,12 +295,11 @@ void DxInit::CreateDepthBuffer()
 	dev->CreateDepthStencilView(depthBuffer.Get(), &dsvDesc, dsvHeap->GetCPUDescriptorHandleForHeapStart());
 }
 
-//深度バッファのクリア
-void DxInit::ClearDepthBuffer()
+//フェンス
+void DxInit::CreateFence()
 {
-	//深度ステンシルビュー用デスクリプタヒープのハンドルを取得
-	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvH = CD3DX12_CPU_DESCRIPTOR_HANDLE(dsvHeap->GetCPUDescriptorHandleForHeapStart());
-	
-	//深度バッファのクリア
-	cmdList->ClearDepthStencilView(dsvH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	HRESULT result = S_FALSE;
+
+	//フェンスの生成
+	result = dev->CreateFence(fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 }

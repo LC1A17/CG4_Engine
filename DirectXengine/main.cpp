@@ -2,6 +2,8 @@
 #include "DxInit.h"
 #include "Sound.h"
 #include "GameScene.h"
+#include "LightGroup.h"
+#include "ParticleManager.h"
 //#include "fbxsdk.h"
 #include "FbxLoader.h"
 
@@ -9,37 +11,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 	//FbxManager* fbxManager = FbxManager::Create();
 
-	//WinInit
 	WinInit* win = nullptr;
-	win = new WinInit();
-	win->CreateWIN();
-
-	//DxInit
 	DxInit* dxInit = nullptr;
-	dxInit = new DxInit();
-	dxInit->Initialize(win);
-
+	Input* input = nullptr;
+	Sound* sound = nullptr;
 	GameScene* gameScene = nullptr;
 
-	//入力関連
-	Input* input = nullptr;
-	input = new Input();
+	//ゲームウィンドウの作成
+	win = new WinInit();
+	win->CreateWIN();
+	//DirectX初期化処理
+	dxInit = new DxInit();
+	dxInit->Initialize(win);
+	//入力初期化処理	
+	input = Input::GetInstance();
 	input->Initialize(win->GetInstance(), win->GetHwnd());
-
-	//サウンド
-	Sound* sound = nullptr;
+	//サウンド初期化処理
 	sound = new Sound();
 	sound->Initialize();
-	
-	//スプライト
+	//スプライト初期化処理
 	Sprite::StaticInitialize(dxInit->GetDev(), WinInit::WIN_WIDTH, WinInit::WIN_HEIGHT);
-
-	//3Dオブジェクト
-	Object3d::StaticInitialize(dxInit->GetDev(), WinInit::WIN_WIDTH, WinInit::WIN_HEIGHT);
-
+	//ライト静的初期化
+	LightGroup::StaticInitialize(dxInit->GetDev());
+	//パーティクルマネージャ初期化
+	ParticleManager::GetInstance()->Initialize(dxInit->GetDev());
 	//FBX
 	FbxLoader::GetInstance()->Initialize(dxInit->GetDev());
-
 	//GameScene
 	gameScene = new GameScene();
 	gameScene->Initialize(dxInit, input, sound);
@@ -74,7 +71,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	//各種解放
 	delete(gameScene);
 	delete(sound);
-	delete(input);
 	delete(dxInit);
 	FbxLoader::GetInstance()->Finalize();
 
